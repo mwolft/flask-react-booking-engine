@@ -1,52 +1,54 @@
-import React, { useEffect } from "react"
-import rigoImageUrl from "../assets/img/rigo-baby.jpg";
-import useGlobalReducer from "../hooks/useGlobalReducer.jsx";
+import React, { useState } from "react"
 
 export const Home = () => {
+	const [form, setForm] = useState({
+		checkIn: "",
+		checkOut: "",
+		adults: 1,
+		children: 0,
+		roomType: ""
+	})
 
-	const { store, dispatch } = useGlobalReducer()
-
-	const loadMessage = async () => {
-		try {
-			const backendUrl = import.meta.env.VITE_BACKEND_URL
-
-			if (!backendUrl) throw new Error("VITE_BACKEND_URL is not defined in .env file")
-
-			const response = await fetch(backendUrl + "/api/hello")
-			const data = await response.json()
-
-			if (response.ok) dispatch({ type: "set_hello", payload: data.message })
-
-			return data
-
-		} catch (error) {
-			if (error.message) throw new Error(
-				`Could not fetch the message from the backend.
-				Please check if the backend is running and the backend port is public.`
-			);
-		}
-
+	const handleChange = e => {
+		setForm({ ...form, [e.target.name]: e.target.value })
 	}
 
-	useEffect(() => {
-		loadMessage()
-	}, [])
+	const handleSubmit = e => {
+		e.preventDefault()
+		console.log(form)
+	}
 
 	return (
-		<div className="text-center mt-5">
-			<h1 className="display-4">Hello Rigo!!</h1>
-			<p className="lead">
-				<img src={rigoImageUrl} className="img-fluid rounded-circle mb-3" alt="Rigo Baby" />
-			</p>
-			<div className="alert alert-info">
-				{store.message ? (
-					<span>{store.message}</span>
-				) : (
-					<span className="text-danger">
-						Loading message from the backend (make sure your python 🐍 backend is running)...
-					</span>
-				)}
-			</div>
+		<div className="home-container">
+			<h1 className="title">Reserva tu estancia</h1>
+			<form className="booking-form" onSubmit={handleSubmit}>
+				<div className="form-group">
+					<label>Entrada</label>
+					<input type="date" name="checkIn" value={form.checkIn} onChange={handleChange} required />
+				</div>
+				<div className="form-group">
+					<label>Salida</label>
+					<input type="date" name="checkOut" value={form.checkOut} onChange={handleChange} required />
+				</div>
+				<div className="form-group">
+					<label>Adultos</label>
+					<input type="number" name="adults" value={form.adults} onChange={handleChange} min="1" />
+				</div>
+				<div className="form-group">
+					<label>Niños</label>
+					<input type="number" name="children" value={form.children} onChange={handleChange} min="0" />
+				</div>
+				<div className="form-group">
+					<label>Habitación</label>
+					<select name="roomType" value={form.roomType} onChange={handleChange} required>
+						<option value="">Selecciona tipo</option>
+						<option value="doble">Doble</option>
+						<option value="suite">Suite</option>
+						<option value="familiar">Familiar</option>
+					</select>
+				</div>
+				<button type="submit" className="submit-btn">Buscar disponibilidad</button>
+			</form>
 		</div>
-	);
-}; 
+	)
+}

@@ -1,0 +1,189 @@
+html, body, #root { 
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+.app-wrapper {
+    display: flex;
+    flex-direction: column; 
+    min-height: 100vh; 
+}
+
+.content-main {
+    flex-grow: 1; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center; 
+    align-items: center; 
+    
+    padding: 20px;
+    width: 100%;
+}
+
+
+
+
+
+
+.home-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 2rem;
+}
+
+.title {
+	font-size: 2rem;
+	margin-bottom: 1.5rem;
+	text-align: center;
+}
+
+.booking-form {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 1rem;
+	width: 100%;
+	max-width: 800px;
+}
+
+.form-group {
+	display: flex;
+	flex-direction: column;
+}
+
+label {
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+}
+
+input, select {
+	padding: 0.6rem;
+	border: 1px solid #ccc;
+	border-radius: 6px;
+	font-size: 1rem;
+}
+
+.submit-btn {
+	grid-column: 1 / -1;
+	padding: 0.8rem;
+	background-color: #F4B858;
+	color: #fff;
+	border: none;
+	border-radius: 6px;
+	font-size: 1.1rem;
+	cursor: pointer;
+	transition: background-color 0.3s;
+}
+
+.submit-btn:hover {
+	background-color: #bb8d42;
+}
+
+@media (max-width: 600px) {
+	.booking-form {
+		grid-template-columns: 1fr;
+	}
+}
+
+
+
+
+
+/* Estilos Globales de la barra de navegación */
+.main-nav {
+    background-color: #f8f9fa; /* Color de fondo claro */
+    box-shadow: 0 2px 4px #F4B858;
+    padding: 10px 0;
+}
+
+/* Contenedor principal para usar Grid */
+.nav-container {
+    max-width: 1200px; /* Ancho máximo del contenido */
+    margin: 0 auto; /* Centrar el contenedor */
+    padding: 0 20px;
+
+    /* Grid para posicionamiento: 
+       Columna 1: Logo, Columna 2: Botón, Columna 3: Hamburguesa (oculta) */
+    display: grid;
+    grid-template-columns: 1fr auto; /* Columna Izq (Logo) 1fr, Columna Der (Botón) auto */
+    align-items: center; /* Centrado vertical */
+    gap: 20px;
+}
+
+/* Estilo del Logo/Nombre */
+.nav-logo {
+    text-decoration: none;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #343a40; /* Color oscuro */
+}
+
+/* Estilo del botón de acción */
+.nav-button {
+    background-color: #F4B858;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+
+.nav-button:hover {
+    background-color: #bb8d42;
+}
+
+/* Ocultar el botón de hamburguesa en desktop */
+.hamburger-button {
+    display: none;
+}
+
+/* El contenedor de links debe estar visible y al final en desktop */
+.nav-links {
+    /* En desktop, está en la segunda columna de grid */
+    grid-column: 2 / 3; 
+}
+
+
+
+
+/* Contenedor principal del Footer */
+.main-footer {
+    /* Estilos de caja */
+    width: 100%;
+    padding: 20px 0; /* Un poco de espacio vertical */
+    background-color: #343a40; /* Fondo oscuro (típico de footers) */
+    color: #f8f9fa; /* Texto claro */
+    
+    /* Configuración de Flexbox para centrar el contenido */
+    display: flex;
+    justify-content: center; /* Centrado horizontal */
+    align-items: center; /* Centrado vertical */
+}
+
+/* Contenido interno (donde está el copyright) */
+.footer-content {
+    /* Opcional: Ancho máximo si el footer es muy grande */
+    max-width: 1200px; 
+    padding: 0 20px;
+    text-align: center; /* Asegura que el texto dentro del párrafo esté centrado */
+}
+
+/* Estilo del texto de copyright */
+.footer-content p {
+    margin: 0; /* Elimina el margen por defecto de los párrafos */
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Si quieres que los enlaces se vean bien en el fondo oscuro */
+.footer-content a {
+    color: #adb5bd; /* Un gris claro sutil */
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.footer-content a:hover {
+    color: #ffffff; /* Blanco al pasar el ratón */
+}
