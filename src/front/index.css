@@ -89,36 +89,29 @@ input, select {
 
 
 
-/* Estilos Globales de la barra de navegación */
 .main-nav {
-    background-color: #f8f9fa; /* Color de fondo claro */
+    background-color: #f8f9fa;
     box-shadow: 0 2px 4px #F4B858;
     padding: 10px 0;
 }
 
-/* Contenedor principal para usar Grid */
 .nav-container {
-    max-width: 1200px; /* Ancho máximo del contenido */
-    margin: 0 auto; /* Centrar el contenedor */
+    max-width: 1200px; 
+    margin: 0 auto; 
     padding: 0 20px;
-
-    /* Grid para posicionamiento: 
-       Columna 1: Logo, Columna 2: Botón, Columna 3: Hamburguesa (oculta) */
     display: grid;
-    grid-template-columns: 1fr auto; /* Columna Izq (Logo) 1fr, Columna Der (Botón) auto */
-    align-items: center; /* Centrado vertical */
+    grid-template-columns: 1fr auto; 
+    align-items: center; 
     gap: 20px;
 }
 
-/* Estilo del Logo/Nombre */
 .nav-logo {
     text-decoration: none;
     font-size: 1.5rem;
     font-weight: bold;
-    color: #343a40; /* Color oscuro */
+    color: #343a40; 
 }
 
-/* Estilo del botón de acción */
 .nav-button {
     background-color: #F4B858;
     color: white;
@@ -134,21 +127,18 @@ input, select {
     background-color: #bb8d42;
 }
 
-/* Ocultar el botón de hamburguesa en desktop */
 .hamburger-button {
     display: none;
 }
 
-/* El contenedor de links debe estar visible y al final en desktop */
 .nav-links {
-    /* En desktop, está en la segunda columna de grid */
     grid-column: 2 / 3; 
 }
 
 
 
 
-/* Contenedor principal del Footer */
+
 .main-footer {
     /* Estilos de caja */
     width: 100%;

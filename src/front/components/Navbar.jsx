@@ -29,7 +29,7 @@ export const Navbar = () => {
 
                 {/* 3. Contenido del Menú (Visible en desktop, condicional en móvil) */}
                 <div className={`nav-links ${isMenuOpen ? "is-open" : ""}`}>
-                    <Link to="/demo">
+                    <Link to="/login">
                         <button className="nav-button">Login</button>
                     </Link>
                 </div>
