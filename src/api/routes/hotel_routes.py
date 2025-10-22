@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request
 from api.models import db, RoomTypes, Rooms, Availability, Bookings
 from datetime import datetime
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from api.models import db, Bookings, update_availability_for_booking
 
 hotel_bp = Blueprint('hotel_bp', __name__)
 
@@ -38,6 +40,7 @@ def create_room_type():
 
     return jsonify(new_room_type.serialize()), 201
 
+
 @hotel_bp.route('/room_types/<int:room_type_id>', methods=['PUT'])
 def update_room_type(room_type_id):
     data = request.get_json()
@@ -50,7 +53,8 @@ def update_room_type(room_type_id):
     room_type.description = data.get("description", room_type.description)
     room_type.capacity = data.get("capacity", room_type.capacity)
     room_type.beds = data.get("beds", room_type.beds)
-    room_type.price_per_night = data.get("price_per_night", room_type.price_per_night)
+    room_type.price_per_night = data.get(
+        "price_per_night", room_type.price_per_night)
     room_type.image_url = data.get("image_url", room_type.image_url)
     room_type.is_active = data.get("is_active", room_type.is_active)
 
@@ -72,8 +76,6 @@ def delete_room_type(room_type_id):
     return jsonify({"message": f"Room type {room_type_id} deleted successfully"}), 200
 
 
-
-
 # Rooms
 
 
@@ -92,7 +94,8 @@ def create_room():
         return jsonify({"error": "Missing required fields: room_number, room_type_id"}), 400
 
     # Verificar si ya existe una habitación con ese número
-    existing_room = Rooms.query.filter_by(room_number=data["room_number"]).first()
+    existing_room = Rooms.query.filter_by(
+        room_number=data["room_number"]).first()
     if existing_room:
         return jsonify({"error": "Room number already exists"}), 400
 
@@ -140,7 +143,6 @@ def delete_room(room_id):
     db.session.delete(room)
     db.session.commit()
     return jsonify({"message": f"Room {room_id} deleted successfully"}), 200
-
 
 
 # Availity
@@ -216,53 +218,120 @@ def delete_availability(availability_id):
     return jsonify({"message": f"Availability {availability_id} deleted successfully"}), 200
 
 
-
-
 # Bookings
 
 
 @hotel_bp.route('/bookings', methods=['GET'])
-def get_bookings():
-    bookings = Bookings.query.all()
-    results = [b.serialize() for b in bookings]
-    return jsonify(results), 200
+@jwt_required()
+def get_user_bookings():
+    user_id = int(get_jwt_identity())
+
+    bookings = Bookings.query.filter_by(user_id=user_id).order_by(
+        Bookings.created_at.desc()).all()
+
+    if not bookings:
+        return jsonify({"message": "No bookings found for this user"}), 200
+
+    return jsonify([b.serialize() for b in bookings]), 200
 
 
 @hotel_bp.route('/bookings', methods=['POST'])
+@jwt_required()
 def create_booking():
+    user_id = int(get_jwt_identity())
     data = request.get_json()
 
-    required_fields = ["room_type_id", "check_in", "check_out", "nights", "price_per_night", "total_price"]
-    missing = [f for f in required_fields if f not in data]
+    # 🔹 Validar campos obligatorios
+    required_fields = ["guest_name", "guest_email", "guest_phone", "check_in", "check_out", "room_type_id"]
+    missing = [field for field in required_fields if not data.get(field)]
+
     if missing:
-        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
 
     try:
-        check_in_date = datetime.strptime(data["check_in"], "%Y-%m-%d").date()
-        check_out_date = datetime.strptime(data["check_out"], "%Y-%m-%d").date()
-    except ValueError:
-        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+        booking = Bookings(
+            user_id=user_id,
+            room_id=data.get("room_id"),
+            room_type_id=data.get("room_type_id"),
+            check_in=datetime.strptime(data.get("check_in"), "%Y-%m-%d").date(),
+            check_out=datetime.strptime(data.get("check_out"), "%Y-%m-%d").date(),
+            nights=data.get("nights", 1),
+            status="pending",
+            price_per_night=data.get("price_per_night", 0),
+            total_price=data.get("total_price", 0),
+            payment_status="unpaid",
+            guest_name=data.get("guest_name").strip(),
+            guest_email=data.get("guest_email").strip(),
+            guest_phone=data.get("guest_phone").strip(),
+            notes=data.get("notes")
+        )
 
-    new_booking = Bookings(
-        user_id=data.get("user_id"),
-        room_id=data.get("room_id"),
-        room_type_id=data["room_type_id"],
-        check_in=check_in_date,
-        check_out=check_out_date,
-        nights=data["nights"],
-        status=data.get("status", "pending"),
-        price_per_night=data["price_per_night"],
-        total_price=data["total_price"],
-        payment_status=data.get("payment_status", "unpaid"),
-        payment_method=data.get("payment_method"),
-        guest_name=data.get("guest_name"),
-        guest_email=data.get("guest_email"),
-        guest_phone=data.get("guest_phone"),
-        notes=data.get("notes")
-    )
+        db.session.add(booking)
+        db.session.commit()
 
-    db.session.add(new_booking)
-    db.session.commit()
+        # 🔹 Actualizar disponibilidad (bloquear fechas)
+        update_availability_for_booking(booking)
+        db.session.commit()
 
-    return jsonify(new_booking.serialize()), 201
+        return jsonify(booking.serialize()), 201
 
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@hotel_bp.route('/bookings/<int:booking_id>', methods=['PUT'])
+@jwt_required()
+def update_booking(booking_id):
+    user_id = int(get_jwt_identity())
+    booking = Bookings.query.filter_by(id=booking_id, user_id=user_id).first()
+
+    if not booking:
+        return jsonify({"error": "Booking not found"}), 404
+
+    if booking.status != "pending":
+        return jsonify({"error": "Only pending bookings can be modified"}), 400
+
+    data = request.get_json()
+
+    try:
+        if "check_in" in data:
+            booking.check_in = datetime.strptime(
+                data["check_in"], "%Y-%m-%d").date()
+        if "check_out" in data:
+            booking.check_out = datetime.strptime(
+                data["check_out"], "%Y-%m-%d").date()
+        if "status" in data:
+            booking.status = data["status"]
+        if "notes" in data:
+            booking.notes = data["notes"]
+
+        db.session.commit()
+        return jsonify(booking.serialize()), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@hotel_bp.route('/bookings/<int:booking_id>', methods=['DELETE'])
+@jwt_required()
+def cancel_booking(booking_id):
+    user_id = int(get_jwt_identity())
+    booking = Bookings.query.filter_by(id=booking_id, user_id=user_id).first()
+
+    if not booking:
+        return jsonify({"error": "Booking not found"}), 404
+
+    if booking.status != "pending":
+        return jsonify({"error": "Only pending bookings can be cancelled"}), 400
+
+    try:
+        booking.status = "cancelled"
+        update_availability_for_booking(booking, make_available=True)
+        db.session.commit()
+        return jsonify({"message": "Booking cancelled and availability updated"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

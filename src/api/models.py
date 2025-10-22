@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
+from datetime import timedelta
 
 db = SQLAlchemy()
 
@@ -289,3 +290,29 @@ class Payments(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "notes": self.notes
         }
+
+
+def update_availability_for_booking(booking, make_available=False):
+    """Marca o libera disponibilidad según el estado de la reserva"""
+    current_date = booking.check_in
+    while current_date < booking.check_out:
+        availability = Availability.query.filter_by(
+            room_id=booking.room_id,
+            date=current_date
+        ).first()
+
+        if availability:
+            availability.is_available = make_available
+            availability.booked_by_booking_id = None if make_available else booking.id
+        else:
+            if not make_available:
+                new_availability = Availability(
+                    date=current_date,
+                    room_id=booking.room_id,
+                    room_type_id=booking.room_type_id,
+                    is_available=False,
+                    booked_by_booking_id=booking.id
+                )
+                db.session.add(new_availability)
+
+        current_date += timedelta(days=1)

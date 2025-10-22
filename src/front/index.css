@@ -23,7 +23,7 @@ html, body, #root {
 
 
 
-
+/*LOGIN*/
 
 .home-container {
 	display: flex;
@@ -40,10 +40,9 @@ html, body, #root {
 
 .booking-form {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: 1fr 1fr;
 	gap: 1rem;
 	width: 100%;
-	max-width: 800px;
 }
 
 .form-group {
@@ -134,6 +133,56 @@ input, select {
 .nav-links {
     grid-column: 2 / 3; 
 }
+.user-label {
+    font-weight: 500;
+    margin-right: 1rem;
+    color: #343a40;
+    white-space: nowrap;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+/* Menú responsive */
+@media (max-width: 768px) {
+    .nav-container {
+        grid-template-columns: 1fr auto;
+    }
+
+    .hamburger-button {
+        display: block;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #343a40;
+    }
+
+    .nav-links {
+        display: none;
+        flex-direction: column;
+        align-items: flex-start;
+        background-color: #f8f9fa;
+        padding: 1rem;
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-radius: 8px;
+    }
+
+    .nav-links.is-open {
+        display: flex;
+    }
+
+    .user-label {
+        margin-bottom: 0.5rem;
+    }
+}
 
 
 
@@ -176,4 +225,82 @@ input, select {
 
 .footer-content a:hover {
     color: #ffffff; /* Blanco al pasar el ratón */
+}
+
+
+
+
+.login-container {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.login-form {
+  display: grid;
+  gap: 1rem;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.login-form h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #222;
+}
+
+.login-form label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.login-form input {
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.login-form button {
+  background-color: #0077cc;
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.login-form button:hover {
+  background-color: #005fa3;
+}
+
+.error-msg {
+  background: #ffe0e0;
+  color: #c0392b;
+  padding: 0.6rem;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+.switch-mode {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.switch-mode span {
+  color: #0077cc;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.switch-mode span:hover {
+  text-decoration: underline;
 }

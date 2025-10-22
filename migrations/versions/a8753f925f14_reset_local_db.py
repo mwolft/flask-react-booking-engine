@@ -1,8 +1,8 @@
-"""allow null user_id in bookings
+"""reset local db
 
-Revision ID: 867978375727
+Revision ID: a8753f925f14
 Revises: 
-Create Date: 2025-10-19 08:49:57.432358
+Create Date: 2025-10-22 05:59:27.711415
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '867978375727'
+revision = 'a8753f925f14'
 down_revision = None
 branch_labels = None
 depends_on = None
