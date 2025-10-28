@@ -3,6 +3,7 @@ from api.models import db, RoomTypes, Rooms, Availability, Bookings
 from datetime import datetime
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from api.models import db, Bookings, update_availability_for_booking
+from api.utils import apply_pricing_rules
 
 hotel_bp = Blueprint('hotel_bp', __name__)
 
@@ -335,3 +336,9 @@ def cancel_booking(booking_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+@hotel_bp.route('/pricing/apply/<int:room_type_id>', methods=['POST'])
+def update_prices(room_type_id):
+    result = apply_pricing_rules(room_type_id)
+    return jsonify(result), 200

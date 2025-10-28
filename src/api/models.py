@@ -14,7 +14,7 @@ class UserRole(Enum):
 
 
 class User(db.Model):
-    __tablename__ = 'users'  # ✅ corregido a plural
+    __tablename__ = 'users' 
 
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(100), nullable=False)
@@ -92,20 +92,24 @@ class User(db.Model):
 
 
 class RoomTypes(db.Model):
-    __tablename__ = 'room_types'
+    __tablename__ = "room_types"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text)
     capacity = db.Column(db.Integer, nullable=False, default=2)
     beds = db.Column(db.String(100))  # Ej: "1 cama doble", "2 individuales"
-    price_per_night = db.Column(db.Numeric(10, 2), nullable=False)
+    base_price = db.Column(db.Float, nullable=False, default=0.0)
+    total_rooms = db.Column(db.Integer, nullable=False, default=1)
+    rooms_per_floor = db.Column(db.Integer, nullable=True)
     image_url = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relación con futuras reservas
-    bookings = db.relationship('Bookings', back_populates='room_type', lazy=True)
+    # Relaciones
+    rooms = db.relationship("Rooms", back_populates="room_type", lazy=True)
+    pricing_rules = db.relationship('PricingRules', back_populates='room_type', lazy=True)
+    bookings = db.relationship("Bookings", back_populates="room_type", lazy=True)
 
     def serialize(self):
         return {
@@ -114,7 +118,9 @@ class RoomTypes(db.Model):
             "description": self.description,
             "capacity": self.capacity,
             "beds": self.beds,
-            "price_per_night": float(self.price_per_night),
+            "base_price": self.base_price,
+            "total_rooms": self.total_rooms,
+            "rooms_per_floor": self.rooms_per_floor,
             "image_url": self.image_url,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None
@@ -122,20 +128,23 @@ class RoomTypes(db.Model):
 
 
 class Rooms(db.Model):
-    __tablename__ = 'rooms'
+    __tablename__ = "rooms"
 
     id = db.Column(db.Integer, primary_key=True)
     room_number = db.Column(db.String(20), unique=True, nullable=False)
-    room_type_id = db.Column(db.Integer, db.ForeignKey('room_types.id'), nullable=False)
-    floor = db.Column(db.String(10))  # Ej: “1º”, “2B”
+    room_type_id = db.Column(db.Integer, db.ForeignKey("room_types.id"), nullable=False)
+    floor = db.Column(db.Integer, nullable=True)
     description = db.Column(db.Text)
+    status = db.Column(db.String(50), default="active")
     is_available = db.Column(db.Boolean, default=True)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
 
     # Relaciones
-    room_type = db.relationship('RoomTypes', backref=db.backref('rooms', lazy=True))
-    bookings = db.relationship('Bookings', back_populates='room', lazy=True)
+    availabilities = db.relationship('Availability', back_populates='room', lazy=True)
+    bookings = db.relationship("Bookings", back_populates="room", lazy=True)
+    room_type = db.relationship("RoomTypes", back_populates="rooms", lazy=True)
 
     def serialize(self):
         return {
@@ -145,6 +154,7 @@ class Rooms(db.Model):
             "room_type_name": self.room_type.name if self.room_type else None,
             "floor": self.floor,
             "description": self.description,
+            "status": self.status,
             "is_available": self.is_available,
             "notes": self.notes,
             "created_at": self.created_at.isoformat() if self.created_at else None
@@ -152,25 +162,28 @@ class Rooms(db.Model):
 
 
 class Availability(db.Model):
-    __tablename__ = 'availability'
+    __tablename__ = "availability"
 
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date, nullable=False)
 
-    # Relación con Room
-    room_id = db.Column(db.Integer, db.ForeignKey('rooms.id'), nullable=True)
-    room_type_id = db.Column(db.Integer, db.ForeignKey('room_types.id'), nullable=True)
+    # 🔹 Relación directa con la habitación y el tipo
+    room_id = db.Column(db.Integer, db.ForeignKey("rooms.id"), nullable=False)
+    room_type_id = db.Column(db.Integer, db.ForeignKey("room_types.id"), nullable=False)
 
-    # Estado del día
-    is_available = db.Column(db.Boolean, default=True)
-    booked_by_booking_id = db.Column(db.Integer, db.ForeignKey('bookings.id'), nullable=True)
+    # 🔹 Estado del día
+    is_available = db.Column(db.Boolean, default=True)  
+    closed_manually = db.Column(db.Boolean, default=False)  
+    maintenance_block = db.Column(db.Boolean, default=False)  
+    booked_by_booking_id = db.Column(db.Integer, db.ForeignKey("bookings.id"), nullable=True)
+    daily_price = db.Column(db.Float, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relaciones
-    room = db.relationship('Rooms', backref=db.backref('availability', lazy=True))
-    room_type = db.relationship('RoomTypes', backref=db.backref('availability', lazy=True))
-    booking = db.relationship('Bookings', backref=db.backref('availability_records', lazy=True))
+    # 🔹 Relaciones ORM
+    room = db.relationship('Rooms', back_populates='availabilities')
+    room_type = db.relationship("RoomTypes", backref=db.backref("availability_records", lazy=True))
+    booking = db.relationship("Bookings", backref=db.backref("availability_days", lazy=True))
 
     def serialize(self):
         return {
@@ -181,8 +194,11 @@ class Availability(db.Model):
             "room_type_id": self.room_type_id,
             "room_type_name": self.room_type.name if self.room_type else None,
             "is_available": self.is_available,
+            "closed_manually": self.closed_manually,
+            "maintenance_block": self.maintenance_block,
             "booked_by_booking_id": self.booked_by_booking_id,
-            "created_at": self.created_at.isoformat() if self.created_at else None
+            "daily_price": self.daily_price,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
 
@@ -316,3 +332,50 @@ def update_availability_for_booking(booking, make_available=False):
                 db.session.add(new_availability)
 
         current_date += timedelta(days=1)
+
+
+class PricingRules(db.Model):
+    __tablename__ = "pricing_rules"
+
+    id = db.Column(db.Integer, primary_key=True)
+    room_type_id = db.Column(db.Integer, db.ForeignKey("room_types.id"), nullable=False)
+
+    # 🔹 Nombre visible en el admin o interfaz (Ej: "Super Oferta", "Temporada Alta")
+    name = db.Column(db.String(100), nullable=False)
+
+    # 🔹 Multiplicador o valor absoluto (ej: 1.2 = +20%, 0.8 = -20%)
+    price_modifier = db.Column(db.Float, nullable=False, default=1.0)
+
+    # 🔹 Alternativa opcional: precio fijo en vez de modificador
+    fixed_price = db.Column(db.Float, nullable=True)
+
+    # 🔹 Rango de fechas
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+
+    # 🔹 Color visual para paneles o gráficos
+    color = db.Column(db.String(20), nullable=True)
+
+    # 🔹 Estado
+    is_active = db.Column(db.Boolean, default=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relación inversa con RoomType
+    room_type = db.relationship('RoomTypes', back_populates='pricing_rules')
+
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "room_type_id": self.room_type_id,
+            "room_type_name": self.room_type.name if self.room_type else None,
+            "name": self.name,
+            "price_modifier": self.price_modifier,
+            "fixed_price": self.fixed_price,
+            "start_date": self.start_date.isoformat() if self.start_date else None,
+            "end_date": self.end_date.isoformat() if self.end_date else None,
+            "color": self.color,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

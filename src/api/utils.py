@@ -1,4 +1,6 @@
 from flask import jsonify, url_for
+from api.models import RoomTypes, Availability, PricingRules
+from datetime import datetime
 
 class APIException(Exception):
     status_code = 400
@@ -39,3 +41,38 @@ def generate_sitemap(app):
         <p>Start working on your project by following the <a href="https://start.4geeksacademy.com/starters/full-stack" target="_blank">Quick Start</a></p>
         <p>Remember to specify a real endpoint path like: </p>
         <ul style="text-align: left;">"""+links_html+"</ul></div>"
+
+
+def apply_pricing_rules(room_type_id):
+    """Aplica las reglas de precios activas a la disponibilidad de un tipo de habitación."""
+    room_type = RoomTypes.query.get(room_type_id)
+    if not room_type:
+        return {"error": "Room type not found"}
+
+    base_price = float(room_type.base_price if hasattr(room_type, 'base_price') else room_type.price_per_night)
+
+    # Obtener reglas activas para este tipo de habitación
+    rules = PricingRules.query.filter_by(room_type_id=room_type_id, is_active=True).all()
+
+    # Recorrer todas las disponibilidades futuras
+    availabilities = Availability.query.filter(
+        Availability.room_type_id == room_type_id,
+        Availability.date >= datetime.utcnow().date()
+    ).all()
+
+    for avail in availabilities:
+        final_price = base_price
+
+        # Buscar si hay alguna regla que se aplique a esta fecha
+        for rule in rules:
+            if rule.start_date <= avail.date <= rule.end_date:
+                if rule.fixed_price:
+                    final_price = rule.fixed_price
+                else:
+                    final_price = base_price * rule.price_modifier
+                break  # aplica la primera regla válida
+
+        avail.daily_price = round(final_price, 2)
+
+    db.session.commit()
+    return {"message": f"Pricing rules applied to {len(availabilities)} availability records"}
