@@ -147,76 +147,153 @@ def delete_room(room_id):
 
 
 # Availity
-
-
+# =====================================================
+# 🔹 RUTA 1: Listar todos los bloqueos creados
+# =====================================================
 @hotel_bp.route('/availability', methods=['GET'])
-def get_availability():
-    availabilities = Availability.query.all()
-    results = [a.serialize() for a in availabilities]
+def get_availability_blocks():
+    """
+    Devuelve todos los bloqueos de disponibilidad (cierres, mantenimiento...).
+    Por defecto, si no hay registros, se considera todo disponible.
+    """
+    blocks = Availability.query.order_by(Availability.start_date.desc()).all()
+    results = [b.serialize() for b in blocks]
     return jsonify(results), 200
 
 
+# =====================================================
+# 🔹 RUTA 2: Crear un nuevo bloqueo de disponibilidad
+# =====================================================
 @hotel_bp.route('/availability', methods=['POST'])
-def create_availability():
+def block_availability():
+    """
+    Crea un bloqueo de disponibilidad entre dos fechas,
+    ya sea para una habitación concreta o un tipo completo.
+    """
     data = request.get_json()
 
-    if not data or "date" not in data:
-        return jsonify({"error": "Missing required field: date"}), 400
+    if not data or "start_date" not in data or "end_date" not in data:
+        return jsonify({"error": "Missing required fields: start_date or end_date"}), 400
 
     try:
-        parsed_date = datetime.strptime(data["date"], "%Y-%m-%d").date()
+        start_date = datetime.strptime(data["start_date"], "%Y-%m-%d").date()
+        end_date = datetime.strptime(data["end_date"], "%Y-%m-%d").date()
     except ValueError:
         return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
 
-    new_availability = Availability(
-        date=parsed_date,
+    block = Availability(
+        start_date=start_date,
+        end_date=end_date,
         room_id=data.get("room_id"),
         room_type_id=data.get("room_type_id"),
-        is_available=data.get("is_available", True),
-        booked_by_booking_id=data.get("booked_by_booking_id")
+        closed_manually=data.get("closed_manually", True),
+        maintenance_block=data.get("maintenance_block", False),
+        reason=data.get("reason", "Cierre manual")
     )
 
-    db.session.add(new_availability)
+    db.session.add(block)
     db.session.commit()
+    return jsonify(block.serialize()), 201
 
-    return jsonify(new_availability.serialize()), 201
 
-
-@hotel_bp.route('/availability/<int:availability_id>', methods=['PUT'])
-def update_availability(availability_id):
+# =====================================================
+# 🔹 RUTA 3: Editar un bloqueo existente
+# =====================================================
+@hotel_bp.route('/availability/<int:block_id>', methods=['PUT'])
+def update_availability_block(block_id):
+    """
+    Modifica las fechas o el motivo de un bloqueo existente.
+    """
     data = request.get_json()
-    availability = Availability.query.get(availability_id)
+    block = Availability.query.get(block_id)
 
-    if not availability:
-        return jsonify({"error": "Availability record not found"}), 404
+    if not block:
+        return jsonify({"error": "Block not found"}), 404
 
-    if "date" in data:
-        availability.date = data["date"]
-    if "room_id" in data:
-        availability.room_id = data["room_id"]
-    if "room_type_id" in data:
-        availability.room_type_id = data["room_type_id"]
-    if "is_available" in data:
-        availability.is_available = data["is_available"]
-    if "booked_by_booking_id" in data:
-        availability.booked_by_booking_id = data["booked_by_booking_id"]
+    try:
+        if "start_date" in data:
+            block.start_date = datetime.strptime(data["start_date"], "%Y-%m-%d").date()
+        if "end_date" in data:
+            block.end_date = datetime.strptime(data["end_date"], "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+    if "reason" in data:
+        block.reason = data["reason"]
+    if "closed_manually" in data:
+        block.closed_manually = data["closed_manually"]
+    if "maintenance_block" in data:
+        block.maintenance_block = data["maintenance_block"]
 
     db.session.commit()
+    return jsonify(block.serialize()), 200
 
-    return jsonify(availability.serialize()), 200
 
+# =====================================================
+# 🔹 RUTA 4: Eliminar un bloqueo
+# =====================================================
+@hotel_bp.route('/availability/<int:block_id>', methods=['DELETE'])
+def delete_availability_block(block_id):
+    """
+    Elimina un bloqueo de disponibilidad.
+    """
+    block = Availability.query.get(block_id)
+    if not block:
+        return jsonify({"error": "Block not found"}), 404
 
-@hotel_bp.route('/availability/<int:availability_id>', methods=['DELETE'])
-def delete_availability(availability_id):
-    availability = Availability.query.get(availability_id)
-
-    if not availability:
-        return jsonify({"error": "Availability record not found"}), 404
-
-    db.session.delete(availability)
+    db.session.delete(block)
     db.session.commit()
+    return jsonify({"message": f"Block {block_id} deleted successfully"}), 200
 
-    return jsonify({"message": f"Availability {availability_id} deleted successfully"}), 200
+
+# =====================================================
+# 🔹 RUTA 5: Consultar disponibilidad real (para el cliente)
+# =====================================================
+@hotel_bp.route('/availability/search', methods=['GET'])
+def get_available_rooms():
+    """
+    Devuelve habitaciones disponibles para un rango de fechas,
+    excluyendo las bloqueadas o en mantenimiento.
+    Ejemplo: /availability/search?checkin=2025-11-05&checkout=2025-11-08
+    """
+    check_in = request.args.get("checkin")
+    check_out = request.args.get("checkout")
+
+    if not check_in or not check_out:
+        return jsonify({"error": "Missing required query params: checkin and checkout"}), 400
+
+    try:
+        check_in = datetime.strptime(check_in, "%Y-%m-%d").date()
+        check_out = datetime.strptime(check_out, "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+    # 1️⃣ Bloqueos que solapan con el rango solicitado
+    blocked = Availability.query.filter(
+        Availability.start_date < check_out,
+        Availability.end_date > check_in
+    ).all()
+
+    blocked_room_ids = [b.room_id for b in blocked if b.room_id]
+    blocked_type_ids = [b.room_type_id for b in blocked if b.room_type_id]
+
+    # 2️⃣ Habitaciones activas y no bloqueadas
+    available_rooms = Rooms.query.filter(
+        Rooms.status == "active",
+        Rooms.is_available == True,
+        ~Rooms.id.in_(blocked_room_ids),
+        ~Rooms.room_type_id.in_(blocked_type_ids)
+    ).all()
+
+    # 3️⃣ Serializar resultado
+    results = []
+    for room in available_rooms:
+        results.append({
+            **room.serialize(),
+            "room_type": room.room_type.serialize() if room.room_type else None
+        })
+
+    return jsonify(results), 200
 
 
 # Bookings

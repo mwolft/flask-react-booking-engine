@@ -165,39 +165,37 @@ class Availability(db.Model):
     __tablename__ = "availability"
 
     id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False)
 
-    # 🔹 Relación directa con la habitación y el tipo
-    room_id = db.Column(db.Integer, db.ForeignKey("rooms.id"), nullable=False)
-    room_type_id = db.Column(db.Integer, db.ForeignKey("room_types.id"), nullable=False)
+    # 🔹 Periodo bloqueado
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
 
-    # 🔹 Estado del día
-    is_available = db.Column(db.Boolean, default=True)  
-    closed_manually = db.Column(db.Boolean, default=False)  
-    maintenance_block = db.Column(db.Boolean, default=False)  
-    booked_by_booking_id = db.Column(db.Integer, db.ForeignKey("bookings.id"), nullable=True)
-    daily_price = db.Column(db.Float, nullable=True)
+    # 🔹 Puede aplicarse a una habitación concreta o a todo un tipo
+    room_id = db.Column(db.Integer, db.ForeignKey("rooms.id"), nullable=True)
+    room_type_id = db.Column(db.Integer, db.ForeignKey("room_types.id"), nullable=True)
 
+    # 🔹 Motivos y estado
+    closed_manually = db.Column(db.Boolean, default=False)
+    maintenance_block = db.Column(db.Boolean, default=False)
+    reason = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # 🔹 Relaciones ORM
-    room = db.relationship('Rooms', back_populates='availabilities')
-    room_type = db.relationship("RoomTypes", backref=db.backref("availability_records", lazy=True))
-    booking = db.relationship("Bookings", backref=db.backref("availability_days", lazy=True))
+    room = db.relationship("Rooms", backref=db.backref("availability_blocks", lazy=True))
+    room_type = db.relationship("RoomTypes", backref=db.backref("availability_blocks", lazy=True))
 
     def serialize(self):
         return {
             "id": self.id,
-            "date": self.date.isoformat(),
+            "start_date": self.start_date.isoformat(),
+            "end_date": self.end_date.isoformat(),
             "room_id": self.room_id,
             "room_number": self.room.room_number if self.room else None,
             "room_type_id": self.room_type_id,
             "room_type_name": self.room_type.name if self.room_type else None,
-            "is_available": self.is_available,
             "closed_manually": self.closed_manually,
             "maintenance_block": self.maintenance_block,
-            "booked_by_booking_id": self.booked_by_booking_id,
-            "daily_price": self.daily_price,
+            "reason": self.reason,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
