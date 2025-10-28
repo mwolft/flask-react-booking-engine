@@ -98,7 +98,7 @@ class RoomTypes(db.Model):
     name = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text)
     capacity = db.Column(db.Integer, nullable=False, default=2)
-    beds = db.Column(db.String(100))  # Ej: "1 cama doble", "2 individuales"
+    beds = db.Column(db.String(100))
     base_price = db.Column(db.Float, nullable=False, default=0.0)
     total_rooms = db.Column(db.Integer, nullable=False, default=1)
     rooms_per_floor = db.Column(db.Integer, nullable=True)
@@ -106,10 +106,13 @@ class RoomTypes(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relaciones
     rooms = db.relationship("Rooms", back_populates="room_type", lazy=True)
     pricing_rules = db.relationship('PricingRules', back_populates='room_type', lazy=True)
     bookings = db.relationship("Bookings", back_populates="room_type", lazy=True)
+
+    def __repr__(self):
+        """Texto que se mostrará en Flask-Admin"""
+        return f"{self.name}"
 
     def serialize(self):
         return {
@@ -145,6 +148,10 @@ class Rooms(db.Model):
     availabilities = db.relationship('Availability', back_populates='room', lazy=True)
     bookings = db.relationship("Bookings", back_populates="room", lazy=True)
     room_type = db.relationship("RoomTypes", back_populates="rooms", lazy=True)
+
+    def __repr__(self):
+        """Texto que se mostrará en Flask-Admin"""
+        return f"Habitación {self.room_number}"
 
     def serialize(self):
         return {

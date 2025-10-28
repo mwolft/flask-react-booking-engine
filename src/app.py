@@ -12,6 +12,7 @@ from api.routes import api
 from api.admin import setup_admin
 from api.commands import setup_commands
 from flask_jwt_extended import JWTManager
+from api.routes.hotel_routes import hotel_bp
 
 # from models import Person
 
@@ -20,7 +21,7 @@ static_file_dir = os.path.join(os.path.dirname(
     os.path.realpath(__file__)), '../dist/')
 app = Flask(__name__)
 app.url_map.strict_slashes = False
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app, origins="*", supports_credentials=True)
 
 # database condiguration
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'local.db')}"
@@ -40,6 +41,7 @@ setup_commands(app)
 
 # Add all endpoints form the API with a "api" prefix
 app.register_blueprint(api, url_prefix='/api')
+app.register_blueprint(hotel_bp, url_prefix='/api/hotel')
 
 # Handle/serialize errors like a JSON object
 

@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { AvailabilityResults } from "../components/AvailabilityResults.jsx";
+import { Container, Row, Col, Form, Button, Alert } from "react-bootstrap";
 
 export const Home = () => {
   const [form, setForm] = useState({
@@ -6,12 +8,14 @@ export const Home = () => {
     checkOut: "",
     adults: 1,
     children: 0,
-    roomType: ""
   });
 
   const [availability, setAvailability] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hasSearched, setHasSearched] = useState(false); // ✅ nuevo estado
+
+  const base = import.meta.env.VITE_BACKEND_URL;
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -21,18 +25,17 @@ export const Home = () => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setHasSearched(true); // ✅ activa el flag cuando se busca
 
     try {
-      const base = import.meta.env.VITE_BACKEND_URL;
-      if (!base) throw new Error("VITE_BACKEND_URL no está definida");
-
       const params = new URLSearchParams({
-        check_in: form.checkIn,
-        check_out: form.checkOut,
-        room_type: form.roomType
+        checkin: form.checkIn,
+        checkout: form.checkOut,
       });
 
-      const res = await fetch(`${base}/api/hotel/availability?${params.toString()}`);
+      const res = await fetch(
+        `${base}/api/hotel/availability/search?${params.toString()}`
+      );
       if (!res.ok) throw new Error("Error al obtener disponibilidad");
       const data = await res.json();
       setAvailability(Array.isArray(data) ? data : []);
@@ -45,51 +48,78 @@ export const Home = () => {
   };
 
   return (
-    <div className="home-container">
-      <h1 className="title">Reserva tu estancia</h1>
-      <form className="booking-form" onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Entrada</label>
-          <input type="date" name="checkIn" value={form.checkIn} onChange={handleChange} required />
-        </div>
-        <div className="form-group">
-          <label>Salida</label>
-          <input type="date" name="checkOut" value={form.checkOut} onChange={handleChange} required />
-        </div>
-        <div className="form-group">
-          <label>Adultos</label>
-          <input type="number" name="adults" value={form.adults} onChange={handleChange} min="1" />
-        </div>
-        <div className="form-group">
-          <label>Niños</label>
-          <input type="number" name="children" value={form.children} onChange={handleChange} min="0" />
-        </div>
-        <div className="form-group">
-          <label>Habitación</label>
-          <select name="roomType" value={form.roomType} onChange={handleChange} required>
-            <option value="">Selecciona tipo</option>
-            <option value="doble">Doble</option>
-            <option value="suite">Suite</option>
-            <option value="familiar">Familiar</option>
-          </select>
-        </div>
-        <button type="submit" className="submit-btn">{loading ? "Buscando..." : "Buscar disponibilidad"}</button>
-      </form>
+    <Container style={{ marginTop: "70px" }}>
+      <h1 className="text-center mb-4">Reserva tu estancia</h1>
 
-      {error && <p style={{ color: "red", marginTop: "1rem" }}>{error}</p>}
+      <Form
+        onSubmit={handleSubmit}
+        className="p-3 border rounded bg-light shadow-sm"
+      >
+        <Row className="g-3 align-items-end">
+          <Col md={3}>
+            <Form.Label>Entrada</Form.Label>
+            <Form.Control
+              type="date"
+              name="checkIn"
+              value={form.checkIn}
+              onChange={handleChange}
+              required
+            />
+          </Col>
 
-      {availability.length > 0 && (
-        <div style={{ marginTop: "2rem", width: "100%", maxWidth: 900 }}>
-          <h3>Resultados</h3>
-          <ul>
-            {availability.map((a) => (
-              <li key={a.id}>
-                {a.date} — {a.room_number || "—"} {a.room_type_name ? `(${a.room_type_name})` : ""} — {a.is_available ? "Libre" : "Ocupada"}
-              </li>
-            ))}
-          </ul>
-        </div>
+          <Col md={3}>
+            <Form.Label>Salida</Form.Label>
+            <Form.Control
+              type="date"
+              name="checkOut"
+              value={form.checkOut}
+              onChange={handleChange}
+              required
+            />
+          </Col>
+
+          <Col md={2}>
+            <Form.Label>Adultos</Form.Label>
+            <Form.Control
+              type="number"
+              name="adults"
+              value={form.adults}
+              onChange={handleChange}
+              min="1"
+            />
+          </Col>
+
+          <Col md={2}>
+            <Form.Label>Niños</Form.Label>
+            <Form.Control
+              type="number"
+              name="children"
+              value={form.children}
+              onChange={handleChange}
+              min="0"
+            />
+          </Col>
+
+          <Col md={2}>
+            <Button type="submit" variant="primary" className="w-100">
+              {loading ? "Buscando..." : "Buscar"}
+            </Button>
+          </Col>
+        </Row>
+      </Form>
+
+      {error && (
+        <Alert variant="danger" className="mt-3">
+          {error}
+        </Alert>
       )}
-    </div>
+
+      {/* ✅ pasamos hasSearched al componente */}
+      <AvailabilityResults
+        results={availability}
+        loading={loading}
+        hasSearched={hasSearched}
+      />
+    </Container>
   );
 };

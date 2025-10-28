@@ -31,9 +31,17 @@ export const Navbar = () => {
         <div className={`nav-links ${isMenuOpen ? "is-open" : ""}`}>
           {store.user ? (
             <>
-              <span className="user-label">
-                {store.user.first_name || store.user.email}
-              </span>
+              <div className="user-info">
+                <div className="user-avatar">
+                  <img
+                    src="https://cdn-icons-png.flaticon.com/512/847/847969.png"
+                    alt="User avatar"
+                  />
+                </div>
+                <span className="user-label">
+                  {store.user.first_name || store.user.email}
+                </span>
+              </div>
               <button className="nav-button" onClick={handleLogout}>
                 Cerrar sesión
               </button>
